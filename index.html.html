@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="甜蜜空间">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>💕 我们的甜蜜空间 · 情侣专属网站</title>
+
+    <!-- PWA Manifest (支持添加到手机桌面) -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"甜蜜空间","short_name":"甜蜜空间","start_url":".","display":"standalone","background_color":"#1a1a2e","theme_color":"#ff6b9d","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%95%3C/text%3E%3C/svg%27","sizes":"any","type":"image/svg+xml"}]}'>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK for real-time sync -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;family=Playfair+Display:wght@700&amp;display=swap');
+        
+        :root {
+            --primary-pink: #ff6b9d;
+            --primary-purple: #c06cba;
+            --primary-blue: #6ba3f5;
+            --bg: #1a1a2e;
+            --card: #16213e;
+            --text: #e8e8e8;
+            --gold: #f0c060;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .particle {
+            position: absolute;
+            animation: floatUp linear infinite;
+            opacity: 0;
+            font-size: 16px;
+        }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) rotate(0deg) scale(0); opacity: 0; }
+            10% { opacity: 0.7; }
+            90% { opacity: 0.3; }
+            100% { transform: translateY(-100px) rotate(720deg) scale(1.2); opacity: 0; }
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 100;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Mobile: Hide sidebar, use bottom nav */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+                padding-bottom: 90px;
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            
+            .nav-item {
+                padding: 10px 12px;
+                font-size: 0.85em;
+            }
+            
+            .card {
+                padding: 18px;
+            }
+            
+            .timer-block {
+                min-width: 65px;
+                padding: 12px 10px;
+            }
+            
+            .timer-block .num {
+                font-size: 1.8em;
+            }
+            
+            .gallery-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+            
+            .pet-emoji {
+                font-size: 4.5em;
+            }
+        }
+        
+        .sidebar-logo {
+            text-align: center;
+            padding: 15px 0 25px;
+            font-size: 1.6em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff6b9d, #c06cba);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 18px;
+            margin: 4px 0;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #bbb;
+            font-size: 0.95em;
+            width: 100%;
+            text-align: left;
+            border: none;
+            background: transparent;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            transform: translateX(4px);
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #ff6b9d, #c06cba);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(255, 107, 157, 0.3);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 25px 30px;
+            min-height: 100vh;
+        }
+        
+        .section {
+            display: none;
+            animation: fadeSlideIn 0.4s ease;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 22px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-title {
+            font-size: 1.35em;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b9d, #c06cba);
+            color: #fff;
+            box-shadow: 0 4px 18px rgba(255, 107, 157, 0.35);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(255, 107, 157, 0.5);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+        
+        .btn-outline:hover {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .timer-display {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        
+        .timer-block {
+            background: linear-gradient(135deg, #ff6b9d, #c06cba);
+            border-radius: 18px;
+            padding: 18px 20px;
+            text-align: center;
+            min-width: 80px;
+            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .timer-block.skin-ocean {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+        
+        .timer-block.skin-forest {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+        }
+        
+        .timer-block.skin-bubble {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+        
+        .timer-block.skin-aurora {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 14px;
+        }
+        
+        .gallery-item {
+            aspect-ratio: 1;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .gallery-item:hover {
+            transform: scale(1.03);
+            border-color: #ff6b9d;
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .message-card {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-left: 4px solid #ff6b9d;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b9d, #c06cba);
+            transition: width 0.5s ease;
+        }
+
+        .pet-emoji {
+            font-size: 5.5em;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .pet-emoji:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            animation: modalPop 0.3s ease forwards;
+        }
+        
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.8) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .nav-badge {
+            background: #ff4757;
+            color: #fff;
+            border-radius: 10px;
+            padding: 1px 8px;
+            font-size: 0.65em;
+            margin-left: auto;
+        }
+
+        .skin-btn {
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 0.75em;
+            transition: all 0.2s;
+        }
+        
+        .skin-btn.active {
+            background: #ff6b9d;
+            color: white;
+        }
+
+        .milestone {
+            animation: milestonePop 0.6s ease;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        .achievement-badge {
+            transition: all 0.3s ease;
+        }
+        
+        .achievement-badge.locked {
+            filter: grayscale(0.8);
+            opacity: 0.6;
+        }
+
+        .love-quote {
+            font-style: italic;
+            color: #f0c060;
+            padding: 12px 20px;
+            border-left: 4px solid #f0c060;
+            background: rgba(240, 192, 96, 0.08);
+            border-radius: 0 12px 12px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <div class="particles" id="particles"></div>
+
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">💕 甜蜜空间</div>
+            
+            <button class="nav-item active" data-section="timer">
+                <span class="icon text-xl">⏱️</span> 
+                <span>恋爱计时器</span>
+            </button>
+            <button class="nav-item" data-section="gallery">
+                <span class="icon text-xl">📸</span> 
+                <span>甜蜜相册</span>
+            </button>
+            <button class="nav-item" data-section="messages">
+                <span class="icon text-xl">💬</span> 
+                <span>留言板</span>
+            </button>
+            <button class="nav-item" data-section="checklist">
+                <span class="icon text-xl">✅</span> 
+                <span>恋爱清单</span>
+            </button>
+            <button class="nav-item" data-section="lottery">
+                <span class="icon text-xl">🎲</span> 
+                <span>随机抽选</span>
+            </button>
+            <button class="nav-item" data-section="about">
+                <span class="icon text-xl">👥</span> 
+                <span>关于我们</span>
+            </button>
+            <button class="nav-item" data-section="memorial">
+                <span class="icon text-xl">📅</span> 
+                <span>纪念事件</span>
+            </button>
+            <button class="nav-item" data-section="games">
+                <span class="icon text-xl">🎮</span> 
+                <span>互动游戏 <span class="nav-badge">8</span></span>
+            </button>
+            <button class="nav-item" data-section="weather">
+                <span class="icon text-xl">🌤️</span> 
+                <span>天气预报</span>
+            </button>
+            <button class="nav-item" data-section="pet">
+                <span class="icon text-xl">🐾</span> 
+                <span>宠物乐园</span>
+            </button>
+            <button class="nav-item" data-section="admin">
+                <span class="icon text-xl">⚙️</span> 
+                <span>后台管理</span>
+            </button>
+        </nav>
+
+        <!-- 移动端底部导航栏 -->
+        <nav id="mobile-bottom-nav" class="hidden md:hidden fixed bottom-0 left-0 right-0 bg-[#16213e] border-t border-white/10 z-[150] px-2 py-1.5">
+            <div class="flex justify-around items-center text-xs">
+                <button onclick="switchSection('timer')" class="mobile-nav-btn flex flex-col items-center p-1.5 text-pink-400" data-section="timer">
+                    <i class="fas fa-clock text-lg mb-0.5"></i>
+                    <span class="text-[10px]">计时</span>
+                </button>
+                <button onclick="switchSection('gallery')" class="mobile-nav-btn flex flex-col items-center p-1.5" data-section="gallery">
+                    <i class="fas fa-images text-lg mb-0.5"></i>
+                    <span class="text-[10px]">相册</span>
+                </button>
+                <button onclick="switchSection('messages')" class="mobile-nav-btn flex flex-col items-center p-1.5" data-section="messages">
+                    <i class="fas fa-comments text-lg mb-0.5"></i>
+                    <span class="text-[10px]">留言</span>
+                </button>
+                <button onclick="switchSection('checklist')" class="mobile-nav-btn flex flex-col items-center p-1.5" data-section="checklist">
+                    <i class="fas fa-list-check text-lg mb-0.5"></i>
+                    <span class="text-[10px]">清单</span>
+                </button>
+                <button onclick="switchSection('pet')" class="mobile-nav-btn flex flex-col items-center p-1.5" data-section="pet">
+                    <i class="fas fa-paw text-lg mb-0.5"></i>
+                    <span class="text-[10px]">宠物</span>
+                </button>
+                <button onclick="showMobileMore()" class="mobile-nav-btn flex flex-col items-center p-1.5" >
+                    <i class="fas fa-ellipsis-h text-lg mb-0.5"></i>
+                    <span class="text-[10px]">更多</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            
+            <!-- 1. 恋爱计时器 -->
+            <section id="section-timer" class="section active">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="card-title text-3xl"><i class="fas fa-heart text-pink-400 mr-3"></i>恋爱计时器</h2>
+                            <p class="text-sm opacity-70">记录我们相爱的每一秒</p>
+                        </div>
+                        
+                        <!-- 皮肤切换 -->
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="changeTimerSkin('pink')" class="skin-btn px-3 py-1 text-xs border border-pink-400 text-pink-400 active">粉色泡泡</button>
+                            <button onclick="changeTimerSkin('ocean')" class="skin-btn px-3 py-1 text-xs border border-blue-400 text-blue-400">海洋</button>
+                            <button onclick="changeTimerSkin('forest')" class="skin-btn px-3 py-1 text-xs border border-green-400 text-green-400">森林</button>
+                            <button onclick="changeTimerSkin('aurora')" class="skin-btn px-3 py-1 text-xs border border-purple-400 text-purple-400">极光</button>
+                        </div>
+                    </div>
+
+                    <div class="timer-display" id="timerDisplay">
+                        <div class="timer-block" id="timerDays"><div class="num text-5xl font-bold" id="tDays">0</div><div class="label text-xs tracking-widest">天</div></div>
+                        <div class="timer-block" id="timerHours"><div class="num text-5xl font-bold" id="tHours">0</div><div class="label text-xs tracking-widest">时</div></div>
+                        <div class="timer-block" id="timerMinutes"><div class="num text-5xl font-bold" id="tMinutes">0</div><div class="label text-xs tracking-widest">分</div></div>
+                        <div class="timer-block" id="timerSeconds"><div class="num text-5xl font-bold" id="tSeconds">0</div><div class="label text-xs tracking-widest">秒</div></div>
+                    </div>
+
+                    <div class="mt-6 text-center">
+                        <p id="loveStartDateDisplay" class="text-sm opacity-70"></p>
+                        <div id="milestoneBanner" class="hidden mt-4 p-4 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-2xl border border-pink-400/30">
+                            <div class="flex items-center justify-center gap-3">
+                                <i class="fas fa-gift text-2xl text-pink-400"></i>
+                                <div>
+                                    <p class="font-bold text-pink-300" id="milestoneText"></p>
+                                    <p class="text-xs opacity-70">今天是我们的特别日子！</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-center gap-3">
+                        <button onclick="editStartDate()" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> 修改开始日期</button>
+                        <button onclick="showLoveQuote()" class="btn btn-outline btn-sm"><i class="fas fa-quote-left"></i> 今日情话</button>
+                    </div>
+                </div>
+
+                <!-- 倒计时卡片 -->
+                <div class="card">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2"><i class="fas fa-clock text-purple-400"></i> 下一个纪念日倒计时</h3>
+                    <div id="countdownCard" class="p-5 bg-gradient-to-br from-purple-900/30 to-pink-900/20 rounded-2xl">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm opacity-70">距离下一个纪念日</p>
+                                <p id="nextEventName" class="font-bold text-xl">—</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-4xl font-bold text-purple-400" id="countdownDays">—</div>
+                                <div class="text-xs opacity-70">天</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 相册 -->
+            <section id="section-gallery" class="section">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="card-title"><i class="fas fa-images text-pink-400"></i> 甜蜜相册</h2>
+                        <div>
+                            <input type="file" id="galleryUpload" accept="image/*" multiple class="hidden">
+                            <button onclick="document.getElementById('galleryUpload').click()" class="btn btn-primary btn-sm">
+                                <i class="fas fa-cloud-upload-alt"></i> 上传照片
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 标签筛选 -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button onclick="filterGallery('all')" class="px-4 py-1 text-xs rounded-full bg-white/10 hover:bg-white/20 active">全部</button>
+                        <button onclick="filterGallery('约会')" class="px-4 py-1 text-xs rounded-full bg-pink-500/20 text-pink-300 hover:bg-pink-500/30">约会</button>
+                        <button onclick="filterGallery('旅行')" class="px-4 py-1 text-xs rounded-full bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">旅行</button>
+                        <button onclick="filterGallery('日常')" class="px-4 py-1 text-xs rounded-full bg-green-500/20 text-green-300 hover:bg-green-500/30">日常</button>
+                        <button onclick="filterGallery('惊喜')" class="px-4 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 hover:bg-purple-500/30">惊喜</button>
+                    </div>
+
+                    <div class="gallery-grid" id="galleryGrid"></div>
+                </div>
+
+                <!-- 今日回忆 -->
+                <div class="card">
+                    <h3 class="font-semibold mb-3 flex items-center gap-2"><i class="fas fa-history text-yellow-400"></i> 今日回忆</h3>
+                    <div id="todayMemory" class="p-4 bg-white/5 rounded-2xl min-h-[120px] flex items-center justify-center text-center">
+                        <p class="opacity-70">还没有足够照片，上传一些回忆吧~</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. 留言板 -->
+            <section id="section-messages" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-comments text-pink-400"></i> 留言板 · 情书邮局</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <input type="text" id="msgAuthor" placeholder="你的名字" class="bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 text-sm">
+                        <select id="msgType" class="bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 text-sm">
+                            <option value="love">💕 情话</option>
+                            <option value="promise">🤝 约定</option>
+                            <option value="daily">📝 日常</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <button onclick="addMessage()" class="btn btn-primary flex-1 text-sm">发送</button>
+                            <button onclick="showDailyQuote()" class="btn btn-outline text-sm">每日一句</button>
+                        </div>
+                    </div>
+                    
+                    <textarea id="msgContent" placeholder="写下你想说的话..." class="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm h-24"></textarea>
+                    
+                    <div class="flex items-center gap-2 mt-2 text-xs">
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" id="msgQuiet" class="accent-pink-400"> 
+                            <span>悄悄话模式</span>
+                        </label>
+                        <span class="opacity-50">（点击后才显示内容）</span>
+                    </div>
+
+                    <div id="messagesList" class="mt-6 space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- 4. 恋爱清单 -->
+            <section id="section-checklist" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-list-check text-emerald-400"></i> 恋爱清单 · 共同心愿地图</h2>
+                    
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex-1">
+                            <div class="progress-bar"><div class="progress-fill" id="checklistProgress" style="width:0%"></div></div>
+                            <p class="text-xs mt-1 opacity-70" id="checklistPercent">完成进度: 0%</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-emerald-400 font-bold text-xl" id="checklistDone">0</div>
+                            <div class="text-xs opacity-60">已完成</div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mb-4 flex-wrap">
+                        <input type="text" id="newCheckItem" placeholder="添加新心愿..." class="flex-1 bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-sm">
+                        <select id="checkCategory" class="bg-white/10 border border-white/20 rounded-2xl px-3 py-2 text-sm">
+                            <option value="旅行">旅行</option>
+                            <option value="美食">美食</option>
+                            <option value="电影">电影</option>
+                            <option value="冒险">冒险</option>
+                            <option value="日常">日常</option>
+                        </select>
+                        <button onclick="addCheckItem()" class="btn btn-primary btn-sm">添加</button>
+                    </div>
+
+                    <div id="checklistItems" class="space-y-2"></div>
+                </div>
+
+                <!-- 成就徽章 -->
+                <div class="card">
+                    <h3 class="font-semibold mb-4">🏆 清单成就徽章</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="achievementsBadges"></div>
+                </div>
+            </section>
+
+            <!-- 5. 随机抽选 -->
+            <section id="section-lottery" class="section">
+                <div class="card text-center">
+                    <h2 class="card-title justify-center"><i class="fas fa-dice text-amber-400"></i> 命运转盘 · 随机抽选</h2>
+                    
+                    <div class="my-8">
+                        <div id="lotteryWheel" class="mx-auto w-56 h-56 rounded-full border-[12px] border-white/20 flex items-center justify-center relative cursor-pointer" onclick="spinWheel()">
+                            <div class="text-center">
+                                <div class="text-6xl mb-2">🎰</div>
+                                <div class="font-bold">点击转动</div>
+                            </div>
+                            <!-- 指针 -->
+                            <div class="absolute top-1/2 left-1/2 w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-b-[28px] border-b-pink-500" style="transform: translate(-50%, -80%) rotate(0deg);"></div>
+                        </div>
+                    </div>
+
+                    <div id="lotteryResult" class="min-h-[80px] p-5 bg-white/5 rounded-2xl mb-6 flex items-center justify-center text-xl font-medium">
+                        点击转盘开始你的今日幸运事项~
+                    </div>
+
+                    <div class="flex justify-center gap-3">
+                        <button onclick="spinWheel()" class="btn btn-primary">🎲 转动命运转盘</button>
+                        <button onclick="showLotteryHistory()" class="btn btn-outline">📜 抽选历史</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. 关于我们 -->
+            <section id="section-about" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-user-friends text-purple-400"></i> 关于我们 · 恋爱档案馆</h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-xs opacity-70">你的名字</label>
+                            <input type="text" id="aboutMe" class="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 mb-4">
+                            
+                            <label class="text-xs opacity-70">TA的名字</label>
+                            <input type="text" id="aboutPartner" class="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 mb-4">
+                            
+                            <label class="text-xs opacity-70">恋爱开始日期</label>
+                            <input type="date" id="aboutStartDate" class="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5 mb-4">
+                            
+                            <button onclick="saveAbout()" class="btn btn-primary w-full">保存档案</button>
+                        </div>
+                        
+                        <div>
+                            <label class="text-xs opacity-70">我们的恋爱故事</label>
+                            <textarea id="aboutStory" rows="6" class="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 默契测试 -->
+                <div class="card">
+                    <h3 class="font-semibold mb-4">🧩 默契大考验</h3>
+                    <button onclick="startMatchQuiz()" class="btn btn-primary">开始默契测试</button>
+                    <div id="matchResult" class="mt-4 hidden p-4 bg-white/5 rounded-2xl"></div>
+                </div>
+            </section>
+
+            <!-- 7. 纪念事件 -->
+            <section id="section-memorial" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-calendar-heart text-rose-400"></i> 纪念事件 · 时光胶囊</h2>
+                    
+                    <div class="flex gap-3 mb-5 flex-wrap">
+                        <input type="text" id="memTitle" placeholder="事件名称" class="flex-1 bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-sm">
+                        <input type="date" id="memDate" class="bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-sm">
+                        <button onclick="addMemEvent()" class="btn btn-primary btn-sm">添加事件</button>
+                    </div>
+                    
+                    <div id="memEventsList" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- 8. 互动游戏 -->
+            <section id="section-games" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-gamepad text-amber-400"></i> 情侣互动游戏厅 <span class="text-xs opacity-60">(8款游戏)</span></h2>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div onclick="startGame('truthdare')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">💬</div>
+                            <div class="font-semibold">真心话大冒险</div>
+                        </div>
+                        <div onclick="startGame('match')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">🧩</div>
+                            <div class="font-semibold">默契大考验</div>
+                        </div>
+                        <div onclick="startGame('rps')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">✊</div>
+                            <div class="font-semibold">石头剪刀布</div>
+                        </div>
+                        <div onclick="startGame('guess')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">🔢</div>
+                            <div class="font-semibold">猜数字</div>
+                        </div>
+                        <div onclick="startGame('lovecalc')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">💘</div>
+                            <div class="font-semibold">爱情计算器</div>
+                        </div>
+                        <div onclick="startGame('drawguess')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">🎨</div>
+                            <div class="font-semibold">你画我猜</div>
+                        </div>
+                        <div onclick="startGame('letter')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">📝</div>
+                            <div class="font-semibold">情书生成器</div>
+                        </div>
+                        <div onclick="startGame('cards')" class="game-card p-5 bg-white/5 rounded-2xl cursor-pointer hover:bg-white/10 text-center">
+                            <div class="text-4xl mb-2">🃏</div>
+                            <div class="font-semibold">情侣卡牌</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. 天气 -->
+            <section id="section-weather" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-cloud-sun text-sky-400"></i> 天气预报 · 约会规划师</h2>
+                    
+                    <div class="flex gap-3 mb-6">
+                        <input type="text" id="weatherCity" value="北京" class="flex-1 bg-white/10 border border-white/20 rounded-2xl px-5 py-3">
+                        <button onclick="fetchWeather()" class="btn btn-primary">查询</button>
+                    </div>
+                    
+                    <div id="weatherResult" class="hidden">
+                        <div class="flex items-center justify-between p-6 bg-gradient-to-br from-sky-900/40 to-blue-900/30 rounded-2xl">
+                            <div>
+                                <div class="text-6xl font-bold" id="weatherTemp">--°C</div>
+                                <div class="text-xl" id="weatherDesc"></div>
+                            </div>
+                            <div class="text-right">
+                                <div id="weatherIcon" class="text-6xl mb-2"></div>
+                                <div class="text-sm opacity-80" id="weatherDetail"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 bg-white/5 rounded-2xl">
+                                <div class="text-xs opacity-70">约会指数</div>
+                                <div class="flex items-center gap-1 mt-1" id="dateIndex"></div>
+                            </div>
+                            <div class="p-4 bg-white/5 rounded-2xl">
+                                <div class="text-xs opacity-70">约会建议</div>
+                                <div class="mt-1 text-sm" id="dateAdvice"></div>
+                            </div>
+                            <div class="p-4 bg-white/5 rounded-2xl">
+                                <div class="text-xs opacity-70">穿衣建议</div>
+                                <div class="mt-1 text-sm" id="clothesAdvice"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. 宠物 -->
+            <section id="section-pet" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-paw text-amber-400"></i> 一起养小宠物</h2>
+                    
+                    <div class="text-center">
+                        <div onclick="petInteract()" class="inline-block">
+                            <div id="petEmoji" class="pet-emoji text-[110px] mx-auto">🐱</div>
+                            <div class="font-bold text-2xl mt-2" id="petName">小咪 <span class="text-sm align-super text-amber-400" id="petLevel">Lv.3</span></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4 max-w-md mx-auto mt-6">
+                            <div class="bg-white/5 p-4 rounded-2xl">
+                                <div class="text-xs opacity-70">快乐</div>
+                                <div class="text-3xl font-bold text-amber-400" id="petHappy">85</div>
+                                <div class="h-2 bg-white/10 rounded mt-2"><div class="h-2 bg-amber-400 rounded" id="petHappyBar" style="width:85%"></div></div>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-2xl">
+                                <div class="text-xs opacity-70">饱腹</div>
+                                <div class="text-3xl font-bold text-orange-400" id="petHunger">72</div>
+                                <div class="h-2 bg-white/10 rounded mt-2"><div class="h-2 bg-orange-400 rounded" id="petHungerBar" style="width:72%"></div></div>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-2xl">
+                                <div class="text-xs opacity-70">健康</div>
+                                <div class="text-3xl font-bold text-emerald-400" id="petHealth">90</div>
+                                <div class="h-2 bg-white/10 rounded mt-2"><div class="h-2 bg-emerald-400 rounded" id="petHealthBar" style="width:90%"></div></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center gap-3 mt-8 flex-wrap">
+                            <button onclick="feedPet()" class="btn btn-primary btn-sm"><i class="fas fa-apple-alt"></i> 喂食</button>
+                            <button onclick="playPet()" class="btn btn-outline btn-sm"><i class="fas fa-gamepad"></i> 玩耍</button>
+                            <button onclick="cleanPet()" class="btn btn-outline btn-sm"><i class="fas fa-bath"></i> 清洁</button>
+                            <button onclick="renamePet()" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> 改名</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 11. 后台管理 -->
+            <section id="section-admin" class="section">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-cog text-gray-400"></i> 后台管理系统</h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold mb-3">🎨 主题与外观</h4>
+                            <div class="flex gap-2 mb-4">
+                                <input type="color" id="adminThemeColor" value="#ff6b9d" onchange="changeTheme(this.value)" class="w-12 h-10 rounded cursor-pointer">
+                                <button onclick="resetTheme()" class="btn btn-outline btn-sm">重置</button>
+                            </div>
+                            
+                            <h4 class="font-semibold mb-2">🖼️ 背景图</h4>
+                            <input type="text" id="adminBgUrl" placeholder="输入图片URL" class="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2 mb-2">
+                            <button onclick="applyBg()" class="btn btn-primary btn-sm">应用背景</button>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold mb-3">📊 数据统计</h4>
+                            <div class="space-y-1 text-sm">
+                                <div>📸 照片: <span id="statPhotos" class="font-bold">0</span></div>
+                                <div>💬 留言: <span id="statMessages" class="font-bold">0</span></div>
+                                <div>✅ 清单: <span id="statChecklist" class="font-bold">0</span></div>
+                                <div>📅 纪念事件: <span id="statMemorial" class="font-bold">0</span></div>
+                            </div>
+                            
+                            <div class="flex flex-col gap-2 mt-4">
+                                <button onclick="exportData()" class="btn btn-primary btn-sm w-full">📤 导出数据发给TA</button>
+                                <button onclick="importData()" class="btn btn-outline btn-sm w-full">📥 导入TA的数据</button>
+                                <button onclick="showSyncGuide()" class="btn btn-outline btn-sm w-full text-pink-400 border-pink-400/50">💕 如何与TA同步（必看）</button>
+                            </div>
+                            <button onclick="resetAllData()" class="mt-3 btn btn-danger btn-sm w-full">⚠️ 重置所有数据</button>
+                        </div>
+                    </div>
+
+                    <!-- 新增：一键安装为App -->
+                    <div class="mt-6 p-5 bg-gradient-to-r from-pink-500/10 to-purple-500/10 rounded-2xl border border-pink-400/30">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="fas fa-mobile-alt text-2xl text-pink-400"></i>
+                            <div>
+                                <h4 class="font-bold">📱 安装为手机App（推荐）</h4>
+                                <p class="text-xs opacity-70">一键添加到桌面，像原生App一样使用，无浏览器地址栏</p>
+                            </div>
+                        </div>
+                        <button onclick="installPWA()" class="btn btn-primary w-full mb-2">
+                            <i class="fas fa-download mr-2"></i> 立即安装到手机桌面
+                        </button>
+                        <button onclick="showInstallGuide()" class="btn btn-outline w-full text-sm">
+                            📖 查看详细安装教程（Android / iOS）
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- 图片预览模态 -->
+    <div id="imageModal" onclick="this.style.display='none'" class="hidden fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-6">
+        <div onclick="event.stopImmediatePropagation()" class="max-w-[92%] max-h-[85vh]">
+            <img id="modalImage" class="max-w-full max-h-[75vh] rounded-3xl shadow-2xl">
+            <div class="text-center mt-4">
+                <button onclick="deleteCurrentPhoto()" class="btn btn-danger btn-sm">删除照片</button>
+                <button onclick="document.getElementById('imageModal').style.display='none'" class="btn btn-outline btn-sm ml-2">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏模态 -->
+    <div id="gameModal" onclick="if (event.target.id === 'gameModal') this.style.display='none'" class="hidden fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-[#16213e] rounded-3xl p-7 max-w-lg w-full max-h-[85vh] overflow-auto" id="gameModalContent"></div>
+    </div>
+
+    <script>
+        // ==================== 数据管理 ====================
+        const DB_KEY = 'sweet_love_space_v2';
+
+        function getData() {
+            try {
+                const raw = localStorage.getItem(DB_KEY);
+                return raw ? JSON.parse(raw) : getDefaultData();
+            } catch (e) {
+                return getDefaultData();
+            }
+        }
+
+        function getDefaultData() {
+            return {
+                loveStartDate: '2024-06-20',
+                aboutMe: '兴国',
+                aboutPartner: '宝宝',
+                aboutStory: '那一天，我们相遇在星光下，从此世界变得温柔。',
+                photos: [], // {url: base64, tag: string, mood: string, date: string}
+                messages: [], // {author, type, content, time, quiet: bool}
+                checklist: [], // {text, done, category, priority}
+                memEvents: [], // {title, date}
+                pet: { name: '小咪', happy: 85, hunger: 72, health: 90, level: 3, exp: 45, lastUpdate: Date.now() },
+                themeColor: '#ff6b9d',
+                bgUrl: '',
+                timerSkin: 'pink',
+                achievements: [],
+                lotteryHistory: [],
+                streak: 0,
+                lastCheckin: null
+            };
+        }
+
+        function saveData(data) {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+        }
+
+        function updateData(fn) {
+            const d = getData();
+            fn(d);
+            saveData(d);
+            return d;
+        }
+
+        // ==================== 初始化 ====================
+        let currentSection = 'timer';
+        let currentPhotoIndex = null;
+
+        function init() {
+            createParticles();
+            setupNavigation();
+            loadAllData();
+            startTimer();
+            startPetDecay();
+            checkDailyStreak();
+            updateAllStats();
+            
+            // 默认皮肤
+            const d = getData();
+            if (d.timerSkin) changeTimerSkin(d.timerSkin, true);
+            
+            // 加载设置
+            loadSettings();
+            
+            // 随机今日回忆
+            setTimeout(showTodayMemory, 1200);
+            
+            // 初始化移动端底部导航显示
+            initMobileNav();
+            
+            // PWA 安装功能初始化
+            setupPWAInstall();
+        }
+        
+        function initMobileNav() {
+            const bottomNav = document.getElementById('mobile-bottom-nav');
+            if (window.innerWidth <= 768 && bottomNav) {
+                bottomNav.classList.remove('hidden');
+                bottomNav.classList.add('flex');
+                
+                // 默认高亮计时器
+                const firstBtn = bottomNav.querySelector('[data-section="timer"]');
+                if (firstBtn) {
+                    firstBtn.classList.add('text-pink-400');
+                    firstBtn.classList.remove('text-gray-400');
+                }
+            }
+            
+            // 窗口大小变化时切换
+            window.addEventListener('resize', () => {
+                if (bottomNav) {
+                    if (window.innerWidth <= 768) {
+                        bottomNav.classList.remove('hidden');
+                        bottomNav.classList.add('flex');
+                    } else {
+                        bottomNav.classList.add('hidden');
+                        bottomNav.classList.remove('flex');
+                    }
+                }
+            });
+        }
+        
+        function showMobileMore() {
+            const modal = document.getElementById('gameModal');
+            const content = document.getElementById('gameModalContent');
+            content.innerHTML = `
+                <h3 class="font-bold mb-4 text-xl">更多功能</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="switchSection('lottery'); document.getElementById('gameModal').style.display='none'" class="p-4 bg-white/5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/10">
+                        <i class="fas fa-dice text-xl text-amber-400"></i>
+                        <span>随机抽选</span>
+                    </button>
+                    <button onclick="switchSection('about'); document.getElementById('gameModal').style.display='none'" class="p-4 bg-white/5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/10">
+                        <i class="fas fa-user-friends text-xl text-purple-400"></i>
+                        <span>关于我们</span>
+                    </button>
+                    <button onclick="switchSection('memorial'); document.getElementById('gameModal').style.display='none'" class="p-4 bg-white/5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/10">
+                        <i class="fas fa-calendar-heart text-xl text-rose-400"></i>
+                        <span>纪念事件</span>
+                    </button>
+                    <button onclick="switchSection('games'); document.getElementById('gameModal').style.display='none'" class="p-4 bg-white/5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/10">
+                        <i class="fas fa-gamepad text-xl text-amber-400"></i>
+                        <span>互动游戏</span>
+                    </button>
+                    <button onclick="switchSection('weather'); document.getElementById('gameModal').style.display='none'" class="p-4 bg-white/5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/10">
+                        <i class="fas fa-cloud-sun text-xl text-sky-400"></i>
+                        <span>天气预报</span>
+                    </button>
+                    <button onclick="switchSection('admin'); document.getElementById('gameModal').style.display='none'" class="p-4 bg-white/5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/10">
+                        <i class="fas fa-cog text-xl text-gray-400"></i>
+                        <span>后台管理</span>
+                    </button>
+                </div>
+                <button onclick="document.getElementById('gameModal').style.display='none'" class="mt-5 btn btn-outline w-full">关闭</button>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const emojis = ['💕','❤️','✨','🌸','💖','🩷','💗','🌟'];
+            for (let i = 0; i < 28; i++) {
+                const p = document.createElement('span');
+                p.className = 'particle';
+                p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (Math.random() * 14 + 9) + 's';
+                p.style.animationDelay = Math.random() * 12 + 's';
+                p.style.fontSize = (Math.random() * 18 + 11) + 'px';
+                container.appendChild(p);
+            }
+        }
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const section = item.dataset.section;
+                    switchSection(section);
+                });
+            });
+        }
+
+        function switchSection(section) {
+            currentSection = section;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            const nav = document.querySelector(`[data-section="${section}"]`);
+            if (nav) nav.classList.add('active');
+            
+            // Mobile bottom nav active state
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                btn.classList.remove('text-pink-400');
+                btn.classList.add('text-gray-400');
+                if (btn.dataset.section === section) {
+                    btn.classList.add('text-pink-400');
+                    btn.classList.remove('text-gray-400');
+                }
+            });
+            
+            const sec = document.getElementById(`section-${section}`);
+            if (sec) sec.classList.add('active');
+            
+            // 加载对应数据
+            if (section === 'gallery') renderGallery();
+            if (section === 'messages') renderMessages();
+            if (section === 'checklist') renderChecklist();
+            if (section === 'memorial') renderMemEvents();
+            if (section === 'pet') renderPet();
+            if (section === 'admin') updateAllStats();
+        }
+
+        function loadAllData() {
+            renderGallery();
+            renderMessages();
+            renderChecklist();
+            loadAbout();
+            renderMemEvents();
+            renderPet();
+            updateAllStats();
+        }
+
+        // ==================== 1. 恋爱计时器 ====================
+        let timerInterval = null;
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            const update = () => {
+                const d = getData();
+                const start = new Date(d.loveStartDate);
+                const now = new Date();
+                const diff = now - start;
+
+                if (diff < 0) {
+                    document.getElementById('tDays').textContent = '0';
+                    document.getElementById('tHours').textContent = '0';
+                    document.getElementById('tMinutes').textContent = '0';
+                    document.getElementById('tSeconds').textContent = '0';
+                    document.getElementById('loveStartDateDisplay').textContent = '请设置恋爱开始日期';
+                    return;
+                }
+
+                const totalSec = Math.floor(diff / 1000);
+                const days = Math.floor(totalSec / 86400);
+                const hours = Math.floor((totalSec % 86400) / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const seconds = totalSec % 60;
+
+                document.getElementById('tDays').textContent = days;
+                document.getElementById('tHours').textContent = hours;
+                document.getElementById('tMinutes').textContent = minutes;
+                document.getElementById('tSeconds').textContent = seconds;
+
+                document.getElementById('loveStartDateDisplay').innerHTML = 
+                    `📅 开始于 ${d.loveStartDate} · 已携手 <span class="font-bold text-pink-400">${days}</span> 天`;
+
+                // 里程碑检测
+                checkMilestones(days);
+                
+                // 更新倒计时
+                updateCountdown();
+            };
+
+            update();
+            timerInterval = setInterval(update, 1000);
+        }
+
+        function checkMilestones(days) {
+            const milestones = [100, 520, 1000, 1314];
+            const banner = document.getElementById('milestoneBanner');
+            
+            if (milestones.includes(days)) {
+                banner.classList.remove('hidden');
+                document.getElementById('milestoneText').innerHTML = `🎉 恭喜达到 <span class="font-bold">${days}</span> 天！`;
+                
+                // 撒花特效
+                launchConfetti(80);
+                
+                setTimeout(() => {
+                    banner.classList.add('hidden');
+                }, 6500);
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        function changeTimerSkin(skin, silent = false) {
+            const blocks = document.querySelectorAll('.timer-block');
+            blocks.forEach(b => {
+                b.classList.remove('skin-ocean', 'skin-forest', 'skin-bubble', 'skin-aurora');
+                if (skin === 'ocean') b.classList.add('skin-ocean');
+                else if (skin === 'forest') b.classList.add('skin-forest');
+                else if (skin === 'bubble') b.classList.add('skin-bubble');
+                else if (skin === 'aurora') b.classList.add('skin-aurora');
+            });
+            
+            updateData(d => { d.timerSkin = skin; });
+            
+            if (!silent) showToast('计时器皮肤已切换');
+        }
+
+        function editStartDate() {
+            const newDate = prompt('请输入新的恋爱开始日期 (YYYY-MM-DD)', getData().loveStartDate);
+            if (newDate && /^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+                updateData(d => { d.loveStartDate = newDate; });
+                startTimer();
+                showToast('开始日期已更新 ❤️');
+            }
+        }
+
+        function showLoveQuote() {
+            const quotes = [
+                "每一天都因为有你而闪耀。",
+                "你是我这一生最美的意外。",
+                "想把世界最好的都给你。",
+                "有你在的每一天，都是情人节。",
+                "我的心，只为你跳动。"
+            ];
+            const q = quotes[Math.floor(Math.random() * quotes.length)];
+            showToast(q, 'love');
+        }
+
+        function updateCountdown() {
+            const d = getData();
+            const events = d.memEvents || [];
+            if (events.length === 0) {
+                document.getElementById('nextEventName').textContent = '暂无纪念日';
+                document.getElementById('countdownDays').textContent = '—';
+                return;
+            }
+            
+            const today = new Date();
+            let nextEvent = null;
+            let minDiff = Infinity;
+            
+            events.forEach(ev => {
+                const eventDate = new Date(ev.date);
+                const diff = eventDate - today;
+                if (diff > 0 && diff < minDiff) {
+                    minDiff = diff;
+                    nextEvent = ev;
+                }
+            });
+            
+            if (nextEvent) {
+                const daysLeft = Math.ceil(minDiff / (1000 * 60 * 60 * 24));
+                document.getElementById('nextEventName').textContent = nextEvent.title;
+                document.getElementById('countdownDays').textContent = daysLeft;
+            } else {
+                document.getElementById('nextEventName').textContent = '暂无即将到来的纪念日';
+                document.getElementById('countdownDays').textContent = '—';
+            }
+        }
+
+        // ==================== 2. 相册 ====================
+        function renderGallery(filterTag = 'all') {
+            const d = getData();
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '';
+            
+            let photos = d.photos || [];
+            
+            if (filterTag !== 'all') {
+                photos = photos.filter(p => p.tag === filterTag);
+            }
+            
+            if (photos.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center py-8 opacity-60">还没有照片，上传你们的甜蜜瞬间吧~</p>`;
+                return;
+            }
+            
+            photos.forEach((photo, index) => {
+                const div = document.createElement('div');
+                div.className = `gallery-item group`;
+                div.innerHTML = `
+                    <img src="${photo.url}" alt="照片">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end p-3">
+                        <div class="text-white text-xs w-full">
+                            <div class="flex justify-between items-center">
+                                <span>${photo.tag || '日常'}</span>
+                                <span>${photo.mood || '😊'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="event.stopImmediatePropagation(); deletePhoto(${index})" class="delete-btn absolute top-2 right-2 w-7 h-7 bg-red-500/90 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100">✕</button>
+                `;
+                
+                div.onclick = () => previewPhoto(index);
+                grid.appendChild(div);
+            });
+        }
+
+        function filterGallery(tag) {
+            renderGallery(tag);
+        }
+
+        function previewPhoto(index) {
+            const d = getData();
+            const photo = d.photos[index];
+            if (!photo) return;
+            
+            currentPhotoIndex = index;
+            document.getElementById('modalImage').src = photo.url;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+
+        function deleteCurrentPhoto() {
+            if (currentPhotoIndex === null) return;
+            if (!confirm('真的要删除这张珍贵的回忆吗？')) return;
+            
+            updateData(data => {
+                data.photos.splice(currentPhotoIndex, 1);
+            });
+            document.getElementById('imageModal').style.display = 'none';
+            renderGallery();
+            updateAllStats();
+            showToast('照片已删除');
+        }
+
+        function deletePhoto(index) {
+            if (!confirm('确定删除这张照片吗？')) return;
+            updateData(data => { data.photos.splice(index, 1); });
+            renderGallery();
+            updateAllStats();
+        }
+
+        document.getElementById('galleryUpload').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+            
+            let processed = 0;
+            files.forEach(file => {
+                if (file.size > 3 * 1024 * 1024) {
+                    alert(`图片 ${file.name} 太大，请压缩后再上传`);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const newPhoto = {
+                        url: ev.target.result,
+                        tag: prompt('给这张照片打个标签（约会/旅行/日常/惊喜）', '日常') || '日常',
+                        mood: prompt('当时的心情 emoji（如 😍 😂 😘）', '😊') || '😊',
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    
+                    updateData(data => { data.photos.push(newPhoto); });
+                    processed++;
+                    
+                    if (processed === files.length) {
+                        renderGallery();
+                        updateAllStats();
+                        showToast('照片上传成功！');
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            this.value = '';
+        });
+
+        function showTodayMemory() {
+            const d = getData();
+            const container = document.getElementById('todayMemory');
+            if (!d.photos || d.photos.length === 0) {
+                container.innerHTML = `<p class="opacity-70 text-center py-4">上传照片后，这里会每天随机展示一张历史回忆~</p>`;
+                return;
+            }
+            
+            const randomPhoto = d.photos[Math.floor(Math.random() * d.photos.length)];
+            container.innerHTML = `
+                <div class="flex gap-4 items-center">
+                    <img src="${randomPhoto.url}" class="w-20 h-20 object-cover rounded-2xl flex-shrink-0">
+                    <div>
+                        <div class="font-medium">历史上的今天</div>
+                        <div class="text-sm opacity-70 mt-0.5">${randomPhoto.tag || '日常'} · ${randomPhoto.mood || ''}</div>
+                        <div class="text-xs opacity-50 mt-1">${randomPhoto.date}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== 3. 留言板 ====================
+        function addMessage() {
+            const author = document.getElementById('msgAuthor').value.trim() || '匿名';
+            const type = document.getElementById('msgType').value;
+            const content = document.getElementById('msgContent').value.trim();
+            const quiet = document.getElementById('msgQuiet').checked;
+            
+            if (!content) return alert('请输入留言内容');
+            
+            updateData(data => {
+                data.messages.push({
+                    author,
+                    type,
+                    content,
+                    time: new Date().toLocaleString('zh-CN'),
+                    quiet: quiet
+                });
+            });
+            
+            document.getElementById('msgContent').value = '';
+            document.getElementById('msgQuiet').checked = false;
+            renderMessages();
+            updateAllStats();
+            showToast('留言已发送 ❤️');
+        }
+
+        function renderMessages() {
+            const d = getData();
+            const list = document.getElementById('messagesList');
+            list.innerHTML = '';
+            
+            if (!d.messages || d.messages.length === 0) {
+                list.innerHTML = `<p class="text-center py-6 opacity-60">还没有留言，写下第一句情话吧~</p>`;
+                return;
+            }
+            
+            [...d.messages].reverse().forEach((msg, idx) => {
+                const realIndex = d.messages.length - 1 - idx;
+                const tagClass = msg.type === 'love' ? 'bg-pink-500/20 text-pink-300' : 
+                                msg.type === 'promise' ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300';
+                const tagText = msg.type === 'love' ? '💕 情话' : msg.type === 'promise' ? '🤝 约定' : '📝 日常';
+                
+                const div = document.createElement('div');
+                div.className = `message-card ${msg.quiet ? 'cursor-pointer' : ''}`;
+                
+                let contentHTML = msg.quiet ? 
+                    `<div onclick="revealQuietMessage(this, ${realIndex})" class="blur-sm select-none">点击查看悄悄话...</div>` : 
+                    `<p class="mt-2">${escapeHtml(msg.content)}</p>`;
+                
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="tag ${tagClass}">${tagText}</span>
+                            <strong class="ml-2">${escapeHtml(msg.author)}</strong>
+                            <span class="text-xs opacity-50 ml-2">${msg.time}</span>
+                        </div>
+                        <button onclick="deleteMessage(${realIndex}); event.stopImmediatePropagation()" class="text-red-400 hover:text-red-500 text-xs">删除</button>
+                    </div>
+                    ${contentHTML}
+                `;
+                
+                list.appendChild(div);
+            });
+        }
+
+        function revealQuietMessage(el, index) {
+            const d = getData();
+            const msg = d.messages[index];
+            if (msg) {
+                el.outerHTML = `<p class="mt-2">${escapeHtml(msg.content)}</p>`;
+            }
+        }
+
+        function deleteMessage(index) {
+            if (!confirm('确定删除这条留言吗？')) return;
+            updateData(data => { data.messages.splice(index, 1); });
+            renderMessages();
+            updateAllStats();
+        }
+
+        function showDailyQuote() {
+            const quotes = [
+                "你是我这一生最美的意外。",
+                "每一次遇见你，都是生命中最闪耀的时刻。",
+                "我想把全世界最好的都给你。",
+                "有你在的每一天，都是情人节。",
+                "我的心，只为你跳动。"
+            ];
+            const q = quotes[Math.floor(Math.random() * quotes.length)];
+            
+            if (confirm(`今日情话：\n\n"${q}"\n\n要发送到留言板吗？`)) {
+                updateData(data => {
+                    data.messages.push({
+                        author: '系统',
+                        type: 'love',
+                        content: q,
+                        time: new Date().toLocaleString('zh-CN'),
+                        quiet: false
+                    });
+                });
+                renderMessages();
+                showToast('已发送到留言板');
+            }
+        }
+
+        // ==================== 4. 恋爱清单 ====================
+        function addCheckItem() {
+            const text = document.getElementById('newCheckItem').value.trim();
+            const category = document.getElementById('checkCategory').value;
+            if (!text) return;
+            
+            updateData(data => {
+                data.checklist.push({ 
+                    text, 
+                    done: false, 
+                    category, 
+                    priority: 3 
+                });
+            });
+            
+            document.getElementById('newCheckItem').value = '';
+            renderChecklist();
+            updateAllStats();
+        }
+
+        function toggleCheckItem(index) {
+            updateData(data => {
+                data.checklist[index].done = !data.checklist[index].done;
+            });
+            renderChecklist();
+            checkAchievements();
+        }
+
+        function renderChecklist() {
+            const d = getData();
+            const container = document.getElementById('checklistItems');
+            container.innerHTML = '';
+            
+            const total = d.checklist ? d.checklist.length : 0;
+            const done = d.checklist ? d.checklist.filter(c => c.done).length : 0;
+            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+            
+            document.getElementById('checklistProgress').style.width = percent + '%';
+            document.getElementById('checklistPercent').textContent = `完成进度: ${percent}%`;
+            document.getElementById('checklistDone').textContent = done;
+            
+            if (total === 0) {
+                container.innerHTML = `<p class="text-center py-6 opacity-60">添加你们想一起完成的心愿吧~</p>`;
+                return;
+            }
+            
+            d.checklist.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = `flex items-center gap-3 p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 cursor-pointer ${item.done ? 'opacity-60' : ''}`;
+                div.innerHTML = `
+                    <div onclick="toggleCheckItem(${i}); event.stopImmediatePropagation()" class="w-6 h-6 flex-shrink-0 rounded-full border-2 border-emerald-400 flex items-center justify-center ${item.done ? 'bg-emerald-400' : ''}">
+                        ${item.done ? '<i class="fas fa-check text-xs text-white"></i>' : ''}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="${item.done ? 'line-through' : ''}">${escapeHtml(item.text)}</div>
+                        <div class="text-xs opacity-60 mt-0.5">${item.category} · 优先级 ${item.priority}⭐</div>
+                    </div>
+                    <button onclick="deleteCheckItem(${i}); event.stopImmediatePropagation()" class="text-red-400 hover:text-red-500 px-2">×</button>
+                `;
+                div.onclick = () => toggleCheckItem(i);
+                container.appendChild(div);
+            });
+        }
+
+        function deleteCheckItem(index) {
+            updateData(data => { data.checklist.splice(index, 1); });
+            renderChecklist();
+            updateAllStats();
+        }
+
+        function checkAchievements() {
+            const d = getData();
+            const doneCount = d.checklist ? d.checklist.filter(c => c.done).length : 0;
+            const newBadges = [];
+            
+            const badges = [
+                { id: 'bronze', count: 10, name: '铜牌心愿家', icon: '🥉' },
+                { id: 'silver', count: 30, name: '银牌心愿家', icon: '🥈' },
+                { id: 'gold', count: 50, name: '金牌心愿家', icon: '🥇' },
+                { id: 'diamond', count: 100, name: '钻石心愿家', icon: '💎' }
+            ];
+            
+            badges.forEach(b => {
+                if (doneCount >= b.count && !d.achievements.includes(b.id)) {
+                    d.achievements.push(b.id);
+                    newBadges.push(b);
+                }
+            });
+            
+            if (newBadges.length > 0) {
+                saveData(d);
+                renderAchievements();
+                newBadges.forEach(b => {
+                    setTimeout(() => {
+                        showToast(`🏆 解锁成就：${b.name}`, 'love');
+                        launchConfetti(40);
+                    }, 300);
+                });
+            }
+        }
+
+        function renderAchievements() {
+            const container = document.getElementById('achievementsBadges');
+            if (!container) return;
+            
+            const d = getData();
+            const allBadges = [
+                { id: 'bronze', name: '铜牌心愿家', icon: '🥉', desc: '完成10个心愿' },
+                { id: 'silver', name: '银牌心愿家', icon: '🥈', desc: '完成30个心愿' },
+                { id: 'gold', name: '金牌心愿家', icon: '🥇', desc: '完成50个心愿' },
+                { id: 'diamond', name: '钻石心愿家', icon: '💎', desc: '完成100个心愿' }
+            ];
+            
+            container.innerHTML = allBadges.map(b => {
+                const unlocked = d.achievements && d.achievements.includes(b.id);
+                return `
+                    <div class="achievement-badge p-4 rounded-2xl text-center border ${unlocked ? 'border-yellow-400 bg-yellow-400/10' : 'border-white/10 bg-white/5 locked'}">
+                        <div class="text-3xl mb-2">${b.icon}</div>
+                        <div class="font-semibold text-sm">${b.name}</div>
+                        <div class="text-[10px] opacity-60 mt-1">${b.desc}</div>
+                        ${unlocked ? '<div class="text-emerald-400 text-xs mt-1">✓ 已解锁</div>' : '<div class="text-xs opacity-40 mt-1">未解锁</div>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== 5. 随机抽选 ====================
+        function spinWheel() {
+            const d = getData();
+            const items = (d.checklist || []).filter(c => !c.done);
+            
+            if (items.length === 0) {
+                document.getElementById('lotteryResult').innerHTML = '😢 没有待完成事项，先去添加吧！';
+                return;
+            }
+            
+            const resultEl = document.getElementById('lotteryResult');
+            const wheel = document.getElementById('lotteryWheel');
+            
+            wheel.style.transition = 'transform 2.8s cubic-bezier(0.23, 1, 0.32, 1)';
+            const randomDeg = 1800 + Math.random() * 1200;
+            wheel.style.transform = `rotate(${randomDeg}deg)`;
+            
+            setTimeout(() => {
+                const finalItem = items[Math.floor(Math.random() * items.length)];
+                resultEl.innerHTML = `💖 今天就做这个：<span class="font-bold text-pink-300">${finalItem.text}</span>`;
+                resultEl.style.background = 'rgba(255,107,157,0.15)';
+                
+                // 记录历史
+                updateData(data => {
+                    if (!data.lotteryHistory) data.lotteryHistory = [];
+                    data.lotteryHistory.unshift({
+                        text: finalItem.text,
+                        time: new Date().toLocaleString('zh-CN')
+                    });
+                });
+                
+                launchConfetti(35);
+                
+                // 重置转盘
+                setTimeout(() => {
+                    wheel.style.transition = 'none';
+                    wheel.style.transform = 'rotate(0deg)';
+                }, 300);
+            }, 2900);
+        }
+
+        function showLotteryHistory() {
+            const d = getData();
+            const history = d.lotteryHistory || [];
+            if (history.length === 0) return alert('还没有抽选记录哦');
+            
+            let html = '<h3 class="font-bold mb-4">📜 抽选历史</h3><div class="space-y-2 max-h-80 overflow-auto">';
+            history.slice(0, 12).forEach(h => {
+                html += `<div class="p-3 bg-white/5 rounded-xl text-sm">${h.time} · ${escapeHtml(h.text)}</div>`;
+            });
+            html += '</div>';
+            
+            const modal = document.getElementById('gameModal');
+            document.getElementById('gameModalContent').innerHTML = html + '<button onclick="document.getElementById(\'gameModal\').style.display=\'none\'" class="mt-5 btn btn-outline w-full">关闭</button>';
+            modal.style.display = 'flex';
+        }
+
+        // ==================== 6. 关于我们 ====================
+        function loadAbout() {
+            const d = getData();
+            document.getElementById('aboutMe').value = d.aboutMe || '';
+            document.getElementById('aboutPartner').value = d.aboutPartner || '';
+            document.getElementById('aboutStartDate').value = d.loveStartDate || '';
+            document.getElementById('aboutStory').value = d.aboutStory || '';
+        }
+
+        function saveAbout() {
+            updateData(data => {
+                data.aboutMe = document.getElementById('aboutMe').value.trim();
+                data.aboutPartner = document.getElementById('aboutPartner').value.trim();
+                data.loveStartDate = document.getElementById('aboutStartDate').value;
+                data.aboutStory = document.getElementById('aboutStory').value.trim();
+            });
+            showToast('档案已保存！');
+            startTimer();
+        }
+
+        function startMatchQuiz() {
+            const questions = [
+                'TA最喜欢的颜色是什么？',
+                'TA最想去旅行的地方？',
+                'TA最喜欢的食物？',
+                '我们第一次约会的地点？',
+                'TA最常用的表情包是？'
+            ];
+            
+            let html = `<h3 class="font-bold mb-4">🧩 默契大考验</h3><p class="text-sm opacity-70 mb-4">双方分别填写答案，然后对比！</p>`;
+            
+            questions.forEach((q, i) => {
+                html += `
+                    <div class="mb-4">
+                        <div class="font-medium mb-1.5">${i+1}. ${q}</div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="q${i}a" placeholder="你的答案" class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm">
+                            <input type="text" id="q${i}b" placeholder="TA的答案" class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm">
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `<button onclick="checkMatchQuiz()" class="btn btn-primary w-full mt-2">对比默契度</button>`;
+            
+            const modal = document.getElementById('gameModal');
+            document.getElementById('gameModalContent').innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        function checkMatchQuiz() {
+            let score = 0;
+            const total = 5;
+            
+            for (let i = 0; i < total; i++) {
+                const a = document.getElementById(`q${i}a`).value.trim().toLowerCase();
+                const b = document.getElementById(`q${i}b`).value.trim().toLowerCase();
+                if (a && b && a === b) score++;
+            }
+            
+            const percent = Math.round((score / total) * 100);
+            let msg = '';
+            if (percent >= 80) msg = '💖 太默契了！天生一对！';
+            else if (percent >= 50) msg = '🥰 还不错，继续加深了解~';
+            else msg = '😊 还有很多惊喜等着发现！';
+            
+            document.getElementById('gameModalContent').innerHTML = `
+                <div class="text-center py-4">
+                    <div class="text-6xl mb-4">${percent >= 80 ? '💖' : percent >= 50 ? '🥰' : '😊'}</div>
+                    <div class="text-4xl font-bold mb-2">${percent}%</div>
+                    <div class="mb-6">${msg}</div>
+                    <button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-primary">完成测试</button>
+                </div>
+            `;
+        }
+
+        // ==================== 7. 纪念事件 ====================
+        function addMemEvent() {
+            const title = document.getElementById('memTitle').value.trim();
+            const date = document.getElementById('memDate').value;
+            if (!title || !date) return alert('请填写事件名称和日期');
+            
+            updateData(data => {
+                data.memEvents.push({ title, date });
+            });
+            
+            document.getElementById('memTitle').value = '';
+            document.getElementById('memDate').value = '';
+            renderMemEvents();
+            updateAllStats();
+            showToast('纪念事件已添加');
+        }
+
+        function renderMemEvents() {
+            const d = getData();
+            const container = document.getElementById('memEventsList');
+            container.innerHTML = '';
+            
+            if (!d.memEvents || d.memEvents.length === 0) {
+                container.innerHTML = `<p class="text-center py-5 opacity-60">还没有纪念事件，记录你们的重要时刻吧~</p>`;
+                return;
+            }
+            
+            const sorted = [...d.memEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            sorted.forEach((ev, i) => {
+                const origIndex = d.memEvents.indexOf(ev);
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-4 p-4 bg-white/5 rounded-2xl';
+                div.innerHTML = `
+                    <div class="text-2xl">📌</div>
+                    <div class="flex-1">
+                        <div class="font-semibold">${escapeHtml(ev.title)}</div>
+                        <div class="text-sm opacity-70">${ev.date}</div>
+                    </div>
+                    <button onclick="deleteMemEvent(${origIndex})" class="text-red-400 hover:text-red-500 px-3">删除</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function deleteMemEvent(index) {
+            if (!confirm('确定删除这个纪念事件吗？')) return;
+            updateData(data => { data.memEvents.splice(index, 1); });
+            renderMemEvents();
+            updateAllStats();
+        }
+
+        // ==================== 8. 游戏 ====================
+        function startGame(type) {
+            const modal = document.getElementById('gameModal');
+            const content = document.getElementById('gameModalContent');
+            let html = '';
+            
+            switch(type) {
+                case 'truthdare':
+                    html = getTruthDareHTML();
+                    break;
+                case 'match':
+                    html = getMatchHTML();
+                    break;
+                case 'rps':
+                    html = getRPSHTML();
+                    break;
+                case 'guess':
+                    html = getGuessHTML();
+                    break;
+                case 'lovecalc':
+                    html = getLoveCalcHTML();
+                    break;
+                case 'drawguess':
+                    html = getDrawGuessHTML();
+                    break;
+                case 'letter':
+                    html = getLetterHTML();
+                    break;
+                case 'cards':
+                    html = getCardsHTML();
+                    break;
+            }
+            
+            content.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        function getTruthDareHTML() {
+            return `
+                <h3 class="font-bold mb-4">💬 真心话大冒险</h3>
+                <div class="flex gap-3 mb-6">
+                    <button onclick="randomTruthDare('truth')" class="flex-1 btn btn-primary">💕 真心话</button>
+                    <button onclick="randomTruthDare('dare')" class="flex-1 btn btn-outline">🎯 大冒险</button>
+                </div>
+                <div id="tdResult" class="min-h-[80px] p-5 bg-white/5 rounded-2xl flex items-center justify-center text-center"></div>
+                <button onclick="document.getElementById('gameModal').style.display='none'" class="mt-5 btn btn-outline w-full">关闭</button>
+            `;
+        }
+
+        window.randomTruthDare = function(mode) {
+            const truths = ['你第一次心动是什么时候？', '你最想和对方去哪里？', '你最喜欢对方的哪个优点？'];
+            const dares = ['给对方一个拥抱', '唱一首情歌', '说三句情话'];
+            
+            const list = mode === 'truth' ? truths : dares;
+            const result = list[Math.floor(Math.random() * list.length)];
+            document.getElementById('tdResult').innerHTML = mode === 'truth' ? `💕 ${result}` : `🎯 ${result}`;
+        };
+
+        function getMatchHTML() { return `<h3>🧩 默契大考验</h3><p class="opacity-70">请双方写下答案对比</p><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-primary mt-4 w-full">关闭</button>`; }
+        function getRPSHTML() { return `<h3>✊ 石头剪刀布</h3><div class="flex gap-4 justify-center my-6"><button class="btn btn-primary text-3xl" onclick="playRPS('rock')">✊</button><button class="btn btn-primary text-3xl" onclick="playRPS('scissors')">✌️</button><button class="btn btn-primary text-3xl" onclick="playRPS('paper')">🖐️</button></div><p id="rpsResult" class="text-center font-bold"></p><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-outline mt-4 w-full">关闭</button>`; }
+        function getGuessHTML() { return `<h3>🔢 猜数字</h3><p>想好一个1-100的数字</p><input id="guessNum" type="number" class="w-full my-4 bg-white/10 border border-white/20 rounded-2xl px-4 py-3"><button onclick="doGuessGame()" class="btn btn-primary w-full">猜！</button><p id="guessFeedback" class="mt-3 text-center"></p><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-outline mt-4 w-full">关闭</button>`; }
+        function getLoveCalcHTML() { return `<h3>💘 爱情计算器</h3><input id="name1" placeholder="你的名字" class="w-full my-2 bg-white/10 border border-white/20 rounded-2xl px-4 py-3"><input id="name2" placeholder="TA的名字" class="w-full my-2 bg-white/10 border border-white/20 rounded-2xl px-4 py-3"><button onclick="calcLove()" class="btn btn-primary w-full mt-2">计算匹配度</button><p id="loveScore" class="text-center mt-4 text-2xl font-bold"></p><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-outline mt-4 w-full">关闭</button>`; }
+        function getDrawGuessHTML() { return `<h3>🎨 你画我猜</h3><p class="opacity-70">一方画，另一方猜（模拟）</p><canvas id="drawCanvas" width="280" height="200" class="border border-white/20 rounded-2xl mx-auto my-4 bg-white"></canvas><div class="flex gap-2 justify-center"><button onclick="clearDrawCanvas()" class="btn btn-outline btn-sm">清空</button><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-primary btn-sm">完成</button></div>`; }
+        function getLetterHTML() { return `<h3>📝 情书生成器</h3><select id="letterStyle" class="w-full my-3 bg-white/10 border border-white/20 rounded-2xl px-4 py-3"><option value="温柔">温柔</option><option value="浪漫">浪漫</option><option value="搞笑">搞笑</option></select><button onclick="generateLetter()" class="btn btn-primary w-full">生成情书</button><div id="generatedLetter" class="mt-4 p-4 bg-white/5 rounded-2xl whitespace-pre-wrap text-sm"></div><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-outline mt-4 w-full">关闭</button>`; }
+        function getCardsHTML() { return `<h3>🃏 情侣卡牌</h3><p class="opacity-70">抽取一张卡牌执行任务</p><button onclick="drawCard()" class="btn btn-primary w-full my-4">抽卡</button><div id="cardResult" class="min-h-[60px]"></div><button onclick="document.getElementById('gameModal').style.display='none'" class="btn btn-outline mt-4 w-full">关闭</button>`; }
+
+        // 简单游戏函数
+        window.playRPS = function(choice) {
+            const choices = ['rock','scissors','paper'];
+            const comp = choices[Math.floor(Math.random()*3)];
+            let res = '';
+            if (choice === comp) res = '平局！';
+            else if ((choice==='rock'&&comp==='scissors') || (choice==='scissors'&&comp==='paper') || (choice==='paper'&&comp==='rock')) res = '你赢了！';
+            else res = '对方赢了~';
+            document.getElementById('rpsResult').innerHTML = `你: ${choice} | 对方: ${comp} → ${res}`;
+        };
+
+        window.doGuessGame = function() {
+            const input = parseInt(document.getElementById('guessNum').value);
+            const secret = Math.floor(Math.random()*100)+1;
+            const fb = document.getElementById('guessFeedback');
+            if (!input) return;
+            if (input === secret) fb.innerHTML = `🎉 猜对了！就是 ${secret}`;
+            else if (input < secret) fb.innerHTML = '📈 太小了';
+            else fb.innerHTML = '📉 太大了';
+        };
+
+        window.calcLove = function() {
+            const n1 = document.getElementById('name1').value.trim();
+            const n2 = document.getElementById('name2').value.trim();
+            if (!n1 || !n2) return;
+            let hash = 0;
+            for (let i=0; i<(n1+n2).length; i++) hash += (n1+n2).charCodeAt(i);
+            const score = 65 + (hash % 36);
+            document.getElementById('loveScore').innerHTML = `${score}% 匹配度 💖`;
+        };
+
+        window.generateLetter = function() {
+            const style = document.getElementById('letterStyle').value;
+            const templates = {
+                '温柔': '亲爱的，\n每一天醒来都因为有你而幸福。\n爱你。',
+                '浪漫': '我的宇宙因你而闪耀。\n永远在一起。',
+                '搞笑': '亲爱的，\n你是我最爱的 bug（可爱的那种）。\n哈哈哈爱你！'
+            };
+            document.getElementById('generatedLetter').innerHTML = templates[style];
+        };
+
+        window.drawCard = function() {
+            const tasks = ['给对方一个拥抱', '说一句情话', '一起看一部电影', '做一顿饭'];
+            const task = tasks[Math.floor(Math.random()*tasks.length)];
+            document.getElementById('cardResult').innerHTML = `<div class="p-4 bg-pink-500/10 rounded-2xl">🃏 ${task}</div>`;
+        };
+
+        // ==================== 9. 天气 ====================
+        async function fetchWeather() {
+            const city = document.getElementById('weatherCity').value.trim() || '北京';
+            const resultDiv = document.getElementById('weatherResult');
+            resultDiv.classList.remove('hidden');
+            
+            try {
+                // 真实天气 API
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=zh`);
+                const geo = await geoRes.json();
+                if (!geo.results || !geo.results.length) throw new Error('城市未找到');
+                
+                const { latitude, longitude, name } = geo.results[0];
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=Asia/Shanghai`);
+                const wData = await wRes.json();
+                const w = wData.current_weather;
+                
+                const codes = {0:'☀️ 晴',1:'🌤️ 少云',2:'⛅ 多云',3:'☁️ 阴',45:'🌫️ 雾',51:'🌧️ 小雨',61:'🌧️ 中雨',80:'🌧️ 阵雨'};
+                const desc = codes[w.weathercode] || '🌡️ 当前天气';
+                
+                document.getElementById('weatherTemp').textContent = w.temperature + '°C';
+                document.getElementById('weatherDesc').textContent = desc;
+                document.getElementById('weatherDetail').textContent = `${name} · 风速 ${w.windspeed}km/h`;
+                
+                // 约会指数 & 建议
+                let index = '⭐⭐⭐⭐';
+                let advice = '适合出门约会~';
+                let clothes = '天气舒适，穿情侣装很合适！';
+                
+                if (w.temperature < 5) { index = '⭐⭐'; advice = '太冷了，建议在家看电影或喝热饮'; clothes = '穿厚外套+围巾'; }
+                else if (w.temperature > 28) { index = '⭐⭐⭐'; advice = '注意防晒，适合清晨或傍晚约会'; clothes = '轻薄透气衣物'; }
+                else if (w.weathercode >= 51) { index = '⭐⭐'; advice = '雨天，推荐室内电影院或咖啡馆'; clothes = '带伞+舒适鞋子'; }
+                
+                document.getElementById('dateIndex').innerHTML = `<span class="text-yellow-400">${index}</span>`;
+                document.getElementById('dateAdvice').textContent = advice;
+                document.getElementById('clothesAdvice').textContent = clothes;
+                
+            } catch(e) {
+                document.getElementById('weatherTemp').textContent = '--°C';
+                document.getElementById('weatherDesc').textContent = '获取失败，请检查城市名';
+            }
+        }
+
+        // ==================== 10. 宠物 ====================
+        function renderPet() {
+            const d = getData();
+            const p = d.pet;
+            
+            document.getElementById('petName').innerHTML = `${p.name} <span class="text-sm align-super text-amber-400">Lv.${p.level || 1}</span>`;
+            document.getElementById('petHappy').textContent = Math.round(p.happy);
+            document.getElementById('petHunger').textContent = Math.round(p.hunger);
+            document.getElementById('petHealth').textContent = Math.round(p.health);
+            
+            document.getElementById('petHappyBar').style.width = p.happy + '%';
+            document.getElementById('petHungerBar').style.width = p.hunger + '%';
+            document.getElementById('petHealthBar').style.width = p.health + '%';
+            
+            // 表情
+            let emoji = '🐱';
+            if (p.health < 40) emoji = '😿';
+            else if (p.hunger < 30) emoji = '😾';
+            else if (p.happy > 85) emoji = '😸';
+            document.getElementById('petEmoji').textContent = emoji;
+        }
+
+        function petInteract() {
+            updateData(data => {
+                data.pet.happy = Math.min(100, data.pet.happy + 8);
+                data.pet.lastUpdate = Date.now();
+            });
+            renderPet();
+            const el = document.getElementById('petEmoji');
+            el.style.transform = 'scale(1.15)';
+            setTimeout(() => el.style.transform = 'scale(1)', 180);
+        }
+
+        function feedPet() {
+            updateData(data => {
+                data.pet.hunger = Math.min(100, data.pet.hunger + 18);
+                data.pet.happy = Math.min(100, data.pet.happy + 5);
+                data.pet.exp = (data.pet.exp || 0) + 8;
+                checkPetLevel(data.pet);
+            });
+            renderPet();
+            showToast('宠物很开心！');
+        }
+
+        function playPet() {
+            updateData(data => {
+                data.pet.happy = Math.min(100, data.pet.happy + 15);
+                data.pet.hunger = Math.max(0, data.pet.hunger - 8);
+                data.pet.exp = (data.pet.exp || 0) + 12;
+                checkPetLevel(data.pet);
+            });
+            renderPet();
+        }
+
+        function cleanPet() {
+            updateData(data => {
+                data.pet.health = Math.min(100, data.pet.health + 12);
+                data.pet.exp = (data.pet.exp || 0) + 6;
+                checkPetLevel(data.pet);
+            });
+            renderPet();
+        }
+
+        function checkPetLevel(pet) {
+            const needed = (pet.level || 1) * 35 + 20;
+            if ((pet.exp || 0) >= needed) {
+                pet.level = (pet.level || 1) + 1;
+                pet.exp = 0;
+                launchConfetti(50);
+                showToast(`宠物升级到 Lv.${pet.level}！`, 'love');
+            }
+        }
+
+        function renamePet() {
+            const name = prompt('给宠物取个新名字', getData().pet.name);
+            if (name && name.trim()) {
+                updateData(data => { data.pet.name = name.trim(); });
+                renderPet();
+            }
+        }
+
+        function startPetDecay() {
+            setInterval(() => {
+                const d = getData();
+                const elapsedMin = (Date.now() - d.pet.lastUpdate) / 1000 / 60;
+                if (elapsedMin > 8) {
+                    const decay = Math.min(elapsedMin / 40, 2.5);
+                    d.pet.hunger = Math.max(0, d.pet.hunger - decay * 0.8);
+                    d.pet.happy = Math.max(0, d.pet.happy - decay * 0.6);
+                    if (d.pet.hunger < 15 || d.pet.happy < 15) {
+                        d.pet.health = Math.max(0, d.pet.health - decay * 0.4);
+                    }
+                    d.pet.lastUpdate = Date.now();
+                    saveData(d);
+                    if (currentSection === 'pet') renderPet();
+                }
+            }, 45000);
+        }
+
+        // ==================== 11. 后台 & 工具 ====================
+        function updateAllStats() {
+            const d = getData();
+            document.getElementById('statPhotos').textContent = d.photos ? d.photos.length : 0;
+            document.getElementById('statMessages').textContent = d.messages ? d.messages.length : 0;
+            document.getElementById('statChecklist').textContent = d.checklist ? d.checklist.length : 0;
+            document.getElementById('statMemorial').textContent = d.memEvents ? d.memEvents.length : 0;
+        }
+
+        function changeTheme(color) {
+            document.documentElement.style.setProperty('--primary-pink', color);
+            updateData(d => { d.themeColor = color; });
+        }
+
+        function resetTheme() {
+            document.documentElement.style.setProperty('--primary-pink', '#ff6b9d');
+            updateData(d => { d.themeColor = '#ff6b9d'; });
+            document.getElementById('adminThemeColor').value = '#ff6b9d';
+        }
+
+        function applyBg() {
+            const url = document.getElementById('adminBgUrl').value.trim();
+            if (url) {
+                document.body.style.backgroundImage = `url('${url}')`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+                updateData(d => { d.bgUrl = url; });
+            }
+        }
+
+        function loadSettings() {
+            const d = getData();
+            if (d.themeColor) {
+                document.documentElement.style.setProperty('--primary-pink', d.themeColor);
+                document.getElementById('adminThemeColor').value = d.themeColor;
+            }
+            if (d.bgUrl) {
+                document.body.style.backgroundImage = `url('${d.bgUrl}')`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+                document.getElementById('adminBgUrl').value = d.bgUrl;
+            }
+        }
+
+        function exportData() {
+            const d = getData();
+            const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `我们的甜蜜空间_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('数据已导出！请发给TA导入 ❤️');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const importedData = JSON.parse(ev.target.result);
+                        
+                        if (confirm('确定要导入这份数据吗？\n当前本地数据将被覆盖（建议先导出备份）')) {
+                            localStorage.setItem(DB_KEY, JSON.stringify(importedData));
+                            showToast('数据导入成功！页面即将刷新');
+                            setTimeout(() => location.reload(), 1200);
+                        }
+                    } catch (err) {
+                        alert('文件格式错误，请确认是正确的JSON数据文件');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        function showSyncGuide() {
+            const modal = document.getElementById('gameModal');
+            const content = document.getElementById('gameModalContent');
+            
+            content.innerHTML = `
+                <div class="text-center">
+                    <h3 class="font-bold text-2xl mb-2">💕 如何与TA同步数据</h3>
+                    <p class="opacity-70 mb-6">目前使用本地存储，需要手动交换数据文件</p>
+                    
+                    <div class="text-left space-y-5">
+                        <div class="p-4 bg-white/5 rounded-2xl">
+                            <div class="font-semibold mb-2 flex items-center gap-2"><span class="text-pink-400">1.</span> 你这边操作</div>
+                            <div class="text-sm">去「后台管理」点击 <b>导出数据</b>，下载 JSON 文件，通过微信/邮件发给TA</div>
+                        </div>
+                        
+                        <div class="p-4 bg-white/5 rounded-2xl">
+                            <div class="font-semibold mb-2 flex items-center gap-2"><span class="text-pink-400">2.</span> TA那边操作</div>
+                            <div class="text-sm">TA打开这个网站 → 后台管理 → 点击 <b>导入数据</b> 选择你发给她的文件</div>
+                        </div>
+                        
+                        <div class="p-4 bg-white/5 rounded-2xl">
+                            <div class="font-semibold mb-2 flex items-center gap-2"><span class="text-pink-400">3.</span> 同步完成</div>
+                            <div class="text-sm">刷新页面后，双方看到的数据就一致了！以后谁更新就导出再发给对方</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 text-xs opacity-60">
+                        提示：这是最简单可靠的方式（无需账号）。<br>
+                        想要实时自动同步？可以升级成 Firebase 版本（我可以帮你做）
+                    </div>
+                    
+                    <button onclick="document.getElementById('gameModal').style.display='none'" class="mt-6 btn btn-primary w-full">我知道了</button>
+                </div>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        function resetAllData() {
+            if (confirm('⚠️ 确定要重置所有数据吗？此操作不可恢复！')) {
+                localStorage.removeItem(DB_KEY);
+                location.reload();
+            }
+        }
+
+        function checkDailyStreak() {
+            const d = getData();
+            const today = new Date().toISOString().split('T')[0];
+            if (d.lastCheckin !== today) {
+                // 可以在这里提示签到
+            }
+        }
+
+        // ==================== 工具函数 ====================
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-medium ${type === 'love' ? 'bg-gradient-to-r from-pink-500 to-purple-500' : 'bg-emerald-600'} text-white`;
+            toast.innerHTML = `<span>${msg}</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'all .35s ease';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 280);
+            }, 2400);
+        }
+
+        function launchConfetti(count = 60) {
+            const colors = ['#ff6b9d', '#c06cba', '#f0c060'];
+            for (let i = 0; i < count; i++) {
+                const c = document.createElement('div');
+                c.style.position = 'fixed';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.top = '-20px';
+                c.style.zIndex = '9999';
+                c.style.fontSize = (Math.random() * 18 + 14) + 'px';
+                c.textContent = ['💕','❤️','✨'][Math.floor(Math.random()*3)];
+                document.body.appendChild(c);
+                
+                const duration = Math.random() * 2800 + 2200;
+                c.animate([
+                    { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
+                    { transform: `translateY(${window.innerHeight + 80}px) rotate(${Math.random()*400 - 100}deg)`, opacity: 0 }
+                ], { duration, easing: 'cubic-bezier(0.25,0.1,0.25,1)' }).onfinish = () => c.remove();
+            }
+        }
+
+        // ==================== PWA 安装功能（一键变App） ====================
+        let deferredPrompt = null;
+
+        function setupPWAInstall() {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // 可选：在控制台提示或显示按钮（已在后台管理显示）
+                console.log('%c[PWA] 可以安装为App', 'color:#ff6b9d');
+            });
+
+            // iOS 特殊处理：显示安装提示
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS && !window.navigator.standalone) {
+                // 可以在这里显示iOS安装提示，但为避免打扰，先在showInstallGuide中处理
+            }
+        }
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showToast('🎉 安装成功！请在桌面找到“甜蜜空间”图标', 'love');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                // 如果没有触发事件，显示详细指南
+                showInstallGuide();
+            }
+        }
+
+        function showInstallGuide() {
+            const modal = document.getElementById('gameModal');
+            const content = document.getElementById('gameModalContent');
+            
+            content.innerHTML = `
+                <div>
+                    <h3 class="font-bold text-2xl mb-4 flex items-center gap-3">
+                        <i class="fas fa-mobile-alt text-pink-400"></i> 
+                        安装「甜蜜空间」为手机App
+                    </h3>
+                    
+                    <div class="space-y-5 text-sm">
+                        <!-- Android -->
+                        <div class="p-4 bg-white/5 rounded-2xl">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">🤖</span>
+                                <span class="font-bold text-lg">Android 手机（Chrome / Edge）</span>
+                            </div>
+                            <ol class="list-decimal list-inside space-y-1.5 pl-1 text-sm opacity-90">
+                                <li>用 Chrome 浏览器打开这个页面</li>
+                                <li>点击右上角 <b>⋮</b> 菜单</li>
+                                <li>选择 <b>「添加到主屏幕」</b> 或 <b>「安装应用」</b></li>
+                                <li>确认后，桌面会出现 💕 甜蜜空间 图标</li>
+                                <li>点击图标即可一键打开，像原生App一样使用！</li>
+                            </ol>
+                        </div>
+
+                        <!-- iOS -->
+                        <div class="p-4 bg-white/5 rounded-2xl">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">🍎</span>
+                                <span class="font-bold text-lg">iPhone / iPad（Safari）</span>
+                            </div>
+                            <ol class="list-decimal list-inside space-y-1.5 pl-1 text-sm opacity-90">
+                                <li>用 Safari 浏览器打开这个页面</li>
+                                <li>点击底部 <b>分享按钮 □↑</b></li>
+                                <li>向下滚动，找到 <b>「添加到主屏幕」</b></li>
+                                <li>点击添加，桌面会出现 App 图标</li>
+                                <li>从桌面直接打开，享受全屏App体验！</li>
+                            </ol>
+                            <p class="text-xs mt-2 opacity-60">iOS 上需要用 Safari 才能安装 PWA</p>
+                        </div>
+
+                        <div class="p-4 bg-pink-500/10 rounded-2xl border border-pink-400/30">
+                            <div class="font-semibold mb-1">💡 为什么推荐安装？</div>
+                            <ul class="text-xs opacity-80 space-y-0.5">
+                                <li>✓ 一键打开，无需输入网址</li>
+                                <li>✓ 全屏沉浸式体验（无浏览器工具栏）</li>
+                                <li>✓ 离线也能使用（照片、留言等数据本地保存）</li>
+                                <li>✓ 像微信小程序一样方便</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-3">
+                        <button onclick="document.getElementById('gameModal').style.display='none'" class="flex-1 btn btn-outline">关闭</button>
+                        <button onclick="if (deferredPrompt) { deferredPrompt.prompt(); document.getElementById('gameModal').style.display='none'; } else { document.getElementById('gameModal').style.display='none'; alert('请按照上方步骤手动安装'); }" class="flex-1 btn btn-primary">尝试自动安装</button>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        // ==================== 启动 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            
+            // 键盘快捷键
+            document.addEventListener('keydown', function(e) {
+                if (e.key === '/' && document.activeElement.tagName === 'BODY') {
+                    e.preventDefault();
+                    switchSection('checklist');
+                    setTimeout(() => document.getElementById('newCheckItem').focus(), 300);
+                }
+            });
+            
+            console.log('%c[甜蜜空间] 情侣专属网站 v2 已就绪 ❤️', 'color:#ff6b9d');
+        });
+    </script>
+
+    <!-- ==================== Firebase 实时同步模块 (不影响原有任何功能) ==================== -->
+    <script>
+        let firebaseApp = null;
+        let fbDatabase = null;
+        let coupleCode = localStorage.getItem('coupleCode') || '';
+        let isFbConnected = false;
+
+        function initFirebaseSync() {
+            const configStr = localStorage.getItem('firebaseConfig');
+            coupleCode = localStorage.getItem('coupleCode') || '';
+            if (!configStr || !coupleCode) return;
+
+            try {
+                const config = JSON.parse(configStr);
+                if (!firebaseApp) {
+                    firebaseApp = firebase.initializeApp(config);
+                    fbDatabase = firebase.database();
+                }
+
+                const ref = fbDatabase.ref(`couples/${coupleCode}/data`);
+                ref.on('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const cloudData = snapshot.val();
+                        const localData = getData();
+                        const merged = { ...localData, ...cloudData };
+                        localStorage.setItem(DB_KEY, JSON.stringify(merged));
+
+                        // 刷新当前视图
+                        if (typeof currentSection !== 'undefined') {
+                            try {
+                                if (currentSection === 'gallery' && typeof renderGallery === 'function') renderGallery();
+                                if (currentSection === 'messages' && typeof renderMessages === 'function') renderMessages();
+                                if (currentSection === 'checklist' && typeof renderChecklist === 'function') renderChecklist();
+                                if (currentSection === 'pet' && typeof renderPet === 'function') renderPet();
+                                if (currentSection === 'about' && typeof loadAbout === 'function') loadAbout();
+                            } catch(e) {}
+                        }
+                    }
+                });
+
+                isFbConnected = true;
+                console.log('%c[Firebase] 实时同步已开启', 'color:#4ade80');
+            } catch (e) {
+                console.warn('Firebase 初始化失败', e);
+            }
+        }
+
+        // 增强 saveData，使其同时同步到 Firebase
+        const _originalSaveData = window.saveData;
+        window.saveData = function(data) {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+            if (isFbConnected && fbDatabase && coupleCode) {
+                fbDatabase.ref(`couples/${coupleCode}/data`).set(data).catch(() => {});
+            }
+        };
+
+        // 云端设置弹窗
+        window.showFirebaseSetup = function() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[300] p-4';
+            modal.innerHTML = `
+                <div onclick="event.stopImmediatePropagation()" class="bg-[#16213e] rounded-3xl p-7 max-w-md w-full">
+                    <h3 class="font-bold text-xl mb-5">☁️ Firebase 实时同步设置</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1">情侣专属代码（双方必须相同）</label>
+                            <input id="fbCoupleCode" value="${coupleCode}" class="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-2.5" placeholder="xingguo-baby-2024">
+                        </div>
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1">Firebase 配置 JSON</label>
+                            <textarea id="fbConfig" rows="6" class="w-full bg-white/10 border border-white/20 rounded-2xl p-3 text-xs font-mono" placeholder='{"apiKey":"...","databaseURL":"..."}'></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex gap-3">
+                        <button onclick="saveFbConfig(this)" class="flex-1 btn btn-primary">保存并连接</button>
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 btn btn-outline">取消</button>
+                    </div>
+                    <div class="mt-4 text-xs opacity-60">首次使用请先在 Firebase 控制台创建项目并启用 Realtime Database。</div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const saved = localStorage.getItem('firebaseConfig');
+            if (saved) document.getElementById('fbConfig').value = saved;
+        };
+
+        window.saveFbConfig = function(btn) {
+            const code = document.getElementById('fbCoupleCode').value.trim();
+            let txt = document.getElementById('fbConfig').value.trim();
+            if (!code || !txt) { alert('请填写情侣代码和配置'); return; }
+
+            try {
+                if (txt.includes('firebaseConfig')) {
+                    const m = txt.match(/firebaseConfig\s*=\s*(\{[\s\S]*\})/);
+                    if (m) txt = m[1];
+                }
+                JSON.parse(txt);
+                localStorage.setItem('coupleCode', code);
+                localStorage.setItem('firebaseConfig', txt);
+                btn.closest('.fixed').remove();
+                isFbConnected = false;
+                initFirebaseSync();
+                alert('云端同步已开启！双方输入相同代码即可实时同步 ❤️');
+            } catch {
+                alert('配置格式不正确');
+            }
+        };
+
+        // 启动时自动尝试连接 Firebase
+        setTimeout(() => {
+            initFirebaseSync();
+        }, 1800);
+
+        // 在后台管理添加 Firebase 按钮
+        setTimeout(() => {
+            const admin = document.getElementById('section-admin');
+            if (admin && !document.getElementById('fbSyncBtn')) {
+                const btn = document.createElement('button');
+                btn.id = 'fbSyncBtn';
+                btn.className = 'mt-3 btn btn-outline btn-sm w-full text-pink-400 border-pink-400/50';
+                btn.innerHTML = '☁️ 设置 Firebase 实时同步';
+                btn.onclick = () => window.showFirebaseSetup();
+                const exportBtn = admin.querySelector('button[onclick*="exportData"]');
+                if (exportBtn) exportBtn.parentNode.insertBefore(btn, exportBtn.nextSibling);
+            }
+        }, 2500);
+    </script>
+</body>
+</html>
